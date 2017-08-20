@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+         http://www.springframework.org/schema/beans/spring-beans-4.0.xsd  
+         http://www.springframework.org/schema/context
+         http://www.springframework.org/schema/context/spring-context-4.0.xsd">
+	
+	<description>Shiro安全配置</description>
+
+    <!--
+    	安全管理器(shiro 核心的Api)
+    	1缓存技术，缓存管理
+    	2realm(获取用于处理数据的realm)
+    -->
+    <bean id="securityManager" class="org.apache.shiro.web.mgt.DefaultWebSecurityManager">
+        <!--设置自定义Realm(实现Realm接口)
+        <property name="realms">
+        	<list>
+        		<ref bean = "shiroDbRealm"/>
+        		<ref bean = "secondRealm"/>
+        	</list>
+        </property>
+        -->
+        <property name="authenticator" ref="authenticator"></property>
+        <!--将缓存管理器，交给安全管理器
+        <property name="cacheManager" ref="shiroEhcacheManager"/>
+        -->
+    </bean>
+    
+    <!-- 我们使用的缓存技术Ecache缓存框架 -->
+
+	<!-- 多realm使用authenticator -->
+	<bean id="authenticator" class=" org.apache.shiro.authc.pam.ModularRealmAuthenticator">
+		<property name="realms">
+			<list>
+				<ref bean="shiroDbRealm"/>
+				<ref bean="secondRealm"/>
+			</list>
+		</property>
+		<property name="authenticationStrategy" ref="allSuccessfulStrategy"></property>
+	</bean>
+	<bean id="allSuccessfulStrategy" class="org.apache.shiro.authc.pam.AllSuccessfulStrategy"></bean>
+	<!-- 自定义shiroRealm -->
+    <bean id="shiroDbRealm" class="com.baisq.shiro.ShiroDbRealm">
+    	<property name="credentialsMatcher">
+    		<bean class="org.apache.shiro.authc.credential.HashedCredentialsMatcher">
+    			<property name="hashAlgorithmName" value="MD5"></property>
+    			<property name="hashIterations" value="1024"></property>
+    		</bean>
+    	</property>
+    </bean>
+    <bean id="secondRealm" class="com.baisq.shiro.SecondRealm">
+    	<property name="credentialsMatcher">
+    		<bean class="org.apache.shiro.authc.credential.HashedCredentialsMatcher">
+    			<property name="hashAlgorithmName" value="SHA1"></property>
+    			<property name="hashIterations" value="1024"></property>
+    		</bean>
+    	</property>
+    </bean>
+    
+    <!-- 必须要有这样的实例,用来管理spring容器当中shiro常见的对象 -->
+	<bean id="lifecycleBeanPostProcessor" class="org.apache.shiro.spring.LifecycleBeanPostProcessor"/>
+	<!-- 启用shiro注解 -->
+	<bean class="org.apache.shiro.spring.security.interceptor.AuthorizationAttributeSourceAdvisor">
+        <property name="securityManager" ref="securityManager"/>
+    </bean> 
+	<!-- 网络方面 -->
+	
+    <!-- Shiro Filter 
+    	1、bean名称和web.xml的shiroFilter的name必须一致
+    -->
+    <bean id="shiroFilter" class="org.apache.shiro.spring.web.ShiroFilterFactoryBean">
+        <!-- 安全管理器 （你当前的过滤器要使用的安全管理器）-->
+        <property name="securityManager" ref="securityManager"/>
+        <!-- 默认的登陆访问url -->
+        <property name="loginUrl" value="/login.jsp"/>
+        <!-- 登陆成功后跳转的url -->
+        <property name="successUrl" value="/success.jsp"/>
+        <!-- 没有权限跳转的url -->
+        <property name="unauthorizedUrl" value="/abc.jsp"/>
+        <!-- 代表我们要完成shiro过滤器的配置 -->
+        <property name="filterChainDefinitions">
+            <value>
+                /login.jsp = anon 
+                /logon = anon
+                /logout = anon
+                /** = authc
+            </value>
+        </property>
+    </bean>
+	
+</beans>
